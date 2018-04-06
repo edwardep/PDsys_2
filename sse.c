@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include <assert.h>
 #include "xmmintrin.h"
+#include "immintrin.h"
 
 double gettime(void)
 {
@@ -73,6 +74,8 @@ int main(int argc, char ** argv)
 		assert(CVec[i]>0.0 && CVec[i]<=1.0*mVec[i]*nVec[i]);
 	}
 	float maxF = 0.0f;
+	__m128 _maxF = _mm_set1_ps(maxF);
+
 	double timeTotal = 0.0f;
 	for(int j=0;j<iters;j++)
 	{
@@ -88,18 +91,16 @@ int main(int argc, char ** argv)
 
 			//float num_1 = mVec[i]*(mVec[i]-1.0)/2.0;
 			__m128 _mVec = _mm_load_ps(&mVec[i]);
-			__m128 _const_1p0 = _mm_load_ps(1.0);
-			__m128 _const_2p0 = _mm_load_ps(2.0);
 			__m128 _tmp;
-			_tmp = _mm_sub_ps(_mVec,_const_1p0);
-			_tmp = _mm_div_ps(_tmp,_const_2p0);
+			_tmp = _mm_sub_ps(_mVec,_mm_set1_ps(1.0));
+			_tmp = _mm_div_ps(_tmp,_mm_set1_ps(2.0));
 
 			__m128 _num_1 = _mm_mul_ps(_mVec,_tmp);
 
 			//float num_2 = nVec[i]*(nVec[i]-1.0)/2.0;
 			__m128 _nVec = _mm_load_ps(&nVec[i]);
-			_tmp = _mm_sub_ps(_nVec,_const_1p0);
-			_tmp = _mm_div_ps(_tmp,_const_2p0);
+			_tmp = _mm_sub_ps(_nVec,_mm_set1_ps(1.0));
+			_tmp = _mm_div_ps(_tmp,_mm_set1_ps(2.0));
 
 			__m128 _num_2 = _mm_mul_ps(_nVec,_tmp);
 
@@ -119,12 +120,18 @@ int main(int argc, char ** argv)
 			__m128 _den = _mm_div_ps(_den_0,_den_1);
 
 			//FVec[i] = num/(den+0.01);
-			__m128 _const_p01 = _mm_load_ss(0.01);
-			//__m128 _tmpd = _mm_add_ds(_den,_const_p01);
-			//__m128 _FVec = _mm_div_ps(_num,_tmpd);
-			//_mm_store_ps(&FVec[i],_FVec);
+			__m128 _tmpd = _mm_add_ps(_den,_mm_set1_ps(0.01));
+			__m128 _FVec = _mm_div_ps(_num,_tmpd);
+			_mm_store_ps(&FVec[i],_FVec);
 
 			//maxF = FVec[i]>maxF?FVec[i]:maxF;
+			__m128 cmpv = _mm_cmpgt_ps(_FVec,_maxF);
+			//__m128 not_cmpv = _mm_cmple_ps(_FVec,_maxF);
+			__m128 and1 = _mm_and_ps(_FVec,cmpv);
+			__m128 and2 = _mm_and_ps(_maxF,not_cmpv);
+			__m128 res = _mm_or_ps(and1,and2);
+
+			maxF  = _mm_set1_ps(res);
 
 		}
 		double time1=gettime();
