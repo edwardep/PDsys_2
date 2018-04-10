@@ -74,8 +74,6 @@ int main(int argc, char ** argv)
 		assert(CVec[i]>0.0 && CVec[i]<=1.0*mVec[i]*nVec[i]);
 	}
 	float maxF = 0.0f;
-	__m128 _maxF = _mm_set1_ps(maxF);
-
 	double timeTotal = 0.0f;
 	for(int j=0;j<iters;j++)
 	{
@@ -83,60 +81,72 @@ int main(int argc, char ** argv)
 		int unroll = (N/4)*4;
 		for(int i=0;i<unroll;i+=4)
 		{
-			//float num_0 = LVec[i]+RVec[i];
+			/* num_0 = LVec[i]+RVec[i]; */
 			__m128 _LVec = _mm_load_ps(&LVec[i]); 
 			__m128 _RVec = _mm_load_ps(&RVec[i]);
 			__m128 _num_0= _mm_add_ps(_LVec,_RVec);
-			//_mm_store_ps(_num_0);
 
-			//float num_1 = mVec[i]*(mVec[i]-1.0)/2.0;
+			/* num_1 = mVec[i]*(mVec[i]-1.0)/2.0; */
 			__m128 _mVec = _mm_load_ps(&mVec[i]);
-			__m128 _tmp;
-			_tmp = _mm_sub_ps(_mVec,_mm_set1_ps(1.0));
-			_tmp = _mm_div_ps(_tmp,_mm_set1_ps(2.0));
+			__m128 _con_1 = _mm_set1_ps(1.0);
+			__m128 _con_2 = _mm_set1_ps(2.0);
+			__m128 _sub_num1 = _mm_sub_ps(_mVec,_con_1);
+			__m128 _div_num1 = _mm_div_ps(_sub_num1,_con_2);
+			__m128 _num_1 = _mm_mul_ps(_mVec,_div_num1);
 
-			__m128 _num_1 = _mm_mul_ps(_mVec,_tmp);
-
-			//float num_2 = nVec[i]*(nVec[i]-1.0)/2.0;
+			/* num_2 = nVec[i]*(nVec[i]-1.0)/2.0; */
 			__m128 _nVec = _mm_load_ps(&nVec[i]);
-			_tmp = _mm_sub_ps(_nVec,_mm_set1_ps(1.0));
-			_tmp = _mm_div_ps(_tmp,_mm_set1_ps(2.0));
+			__m128 _sub_num2 = _mm_sub_ps(_nVec,_con_1);
+			__m128 _div_num2 = _mm_div_ps(_sub_num2,_con_2);
+			__m128 _num_2 = _mm_mul_ps(_nVec,_div_num2);
 
-			__m128 _num_2 = _mm_mul_ps(_nVec,_tmp);
+			/* num = num_0/(num_1+num_2); */
+			__m128 _add_nums = _mm_add_ps(_num_1,_num_2);
+			__m128 _num = _mm_div_ps(_num_0,_add_nums);
 
-			//float num = num_0/(num_1+num_2);
-			_tmp = _mm_add_ps(_num_1,_num_2);
-			__m128 _num = _mm_div_ps(_num_0,_num);
-
-			//float den_0 = CVec[i]-LVec[i]-RVec[i];
+			/* den_0 = CVec[i]-LVec[i]-RVec[i]; */
 			__m128 _CVec = _mm_load_ps(&CVec[i]);
-			_tmp = _mm_sub_ps(_CVec,_LVec);
-			__m128 _den_0 = _mm_sub_ps(_tmp,_RVec);
+			__m128 _sub_CL = _mm_sub_ps(_CVec,_LVec);
+			__m128 _den_0 = _mm_sub_ps(_sub_CL,_RVec);
 
-			//float den_1 = mVec[i]*nVec[i];
+			/* den_1 = mVec[i]*nVec[i]; */
 			__m128 _den_1 = _mm_mul_ps(_mVec,_nVec);
 
-			//float den = den_0/den_1;
+			/* den = den_0/den_1; */
 			__m128 _den = _mm_div_ps(_den_0,_den_1);
 
-			//FVec[i] = num/(den+0.01);
-			__m128 _tmpd = _mm_add_ps(_den,_mm_set1_ps(0.01));
-			__m128 _FVec = _mm_div_ps(_num,_tmpd);
+			/* FVec[i] = num/(den+0.01); */
+			__m128 _con_01 = _mm_set1_ps(0.01);
+			__m128 _add_den = _mm_add_ps(_den,_con_01);
+			__m128 _FVec = _mm_div_ps(_num,_add_den);
 			_mm_store_ps(&FVec[i],_FVec);
 
-			//maxF = FVec[i]>maxF?FVec[i]:maxF;
-			__m128 cmpv = _mm_cmpgt_ps(_FVec,_maxF);
-			//__m128 not_cmpv = _mm_cmple_ps(_FVec,_maxF);
-			__m128 and1 = _mm_and_ps(_FVec,cmpv);
-			__m128 and2 = _mm_and_ps(_maxF,not_cmpv);
-			__m128 res = _mm_or_ps(and1,and2);
+			/* maxF = FVec[i]>maxF?FVec[i]:maxF; 
+			 * if statement with bitwise operation intrinsics
+			 */
 
-			maxF  = _mm_set1_ps(res);
-
+			// __m128 cmpv = _mm_cmpgt_ps(_FVec,_maxF);
+			// __m128 not_cmpv = _mm_cmple_ps(_FVec,_maxF);
+			// __m128 and1 = _mm_and_ps(_FVec,cmpv);
+			// __m128 and2 = _mm_and_ps(_maxF,not_cmpv);
+			// _maxF = _mm_or_ps(and1,and2);
+			// print128_num(_maxF);
+			// _mm_store_ps(&maxFVec[0],_maxF);
+			
+			/*
+			 * if statement with simple loop check
+			 */
+			for(int k = 0; k<4;k++)
+				if(FVec[i+k]>maxF)
+					maxF = FVec[i+k];
 		}
 		double time1=gettime();
 		timeTotal += time1-time0;
 	}
+	/*
+	 * IF (N % 4 != 0) remainder is NOT handled!!
+	 * extra code needed(for loop)
+	 */
 	printf("Time %f Max %f\n", timeTotal/iters, maxF);
 
 	free(mVec);
@@ -146,20 +156,3 @@ int main(int argc, char ** argv)
 	free(CVec);
 	free(FVec);
 }
-
-//~~~~~~ || original for loop ||~~~~~~
-	// for(int i=0;i<N;i++)
-	// 	{
-	// 		float num_0 = LVec[i]+RVec[i];
-	// 		float num_1 = mVec[i]*(mVec[i]-1.0)/2.0;
-	// 		float num_2 = nVec[i]*(nVec[i]-1.0)/2.0;
-	// 		float num = num_0/(num_1+num_2);
-
-	// 		float den_0 = CVec[i]-LVec[i]-RVec[i];
-	// 		float den_1 = mVec[i]*nVec[i];
-	// 		float den = den_0/den_1;
-
-	// 		FVec[i] = num/(den+0.01);
-
-	// 		maxF = FVec[i]>maxF?FVec[i]:maxF;
-	// 	}

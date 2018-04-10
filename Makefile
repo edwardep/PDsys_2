@@ -1,11 +1,13 @@
+all_sse:
+	$(MAKE) sse sse_s
+	@echo "\n\n"
+	@./sse_s $(N)
+	@./sse $(N)
+
 all_dumm:
 	$(MAKE) dummy dummy_s
 	./dummy_s $(N)
 	./dummy $(N)
-all_sse:
-	$(MAKE) sse sse_s
-	./sse_s $(N)
-	./sse $(N)
 
 dummy_s: dummy_s.o
 	gcc -o dummy_s dummy_s.c
