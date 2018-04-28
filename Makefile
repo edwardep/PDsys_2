@@ -5,9 +5,20 @@ all_sse:
 	@./sse $(N)
 
 all_dumm:
-	$(MAKE) dummy dummy_s
+	$(MAKE) dummy dummy_s dummy_mpi
 	./dummy_s $(N)
 	./dummy $(N)
+	lamboot
+	mpiexec -n $(P) ./mpi $(N)
+
+
+
+
+dummy_mpi: dummy_mpi.o
+	mpicc -o dummy_mpi dummy_mpi.c
+
+dummy_mpi.o : dummy_mpi.c
+	mpicc -c -o dummy_mpi.o dummy_mpi.c
 
 dummy_s: dummy_s.o
 	gcc -o dummy_s dummy_s.c
@@ -34,6 +45,7 @@ sse.o : sse.c
 	gcc -c -o sse.o sse.c -msse4.2 -Wall
 
 clean:
+	rm -f dummy_mpi dummy_mpi.o
 	rm -f dummy dummy.o
 	rm -f dummy_s dummy_s.o
 	rm -f sse sse.o

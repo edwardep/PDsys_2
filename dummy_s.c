@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	double time0=gettime();
 	for(i=0;i<N;i++)
 	{
-		c[i] = (a[i] < 2)?9:2;
+		c[i] = a[i] + b[i];
 
 	}
 	double time1=gettime();
