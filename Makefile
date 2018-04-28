@@ -9,11 +9,27 @@ all_dumm:
 	./dummy_s $(N)
 	./dummy $(N)
 	lamboot
-	mpiexec -n $(P) ./mpi $(N)
+	mpiexec -n $(P) ./dummy_mpi $(N)
+all_sum:
+	$(MAKE) sum sum_
+	./sum_ $(N)
+	lamboot
+	mpiexec -n $(P) ./sum $(N)
 
 
 
+sum_: sum_.o
+	gcc -o sum_ sum_.c
 
+sum_.o : sum_.c
+	gcc -c -o sum_.o sum_.c
+
+sum: sum.o
+	mpicc -o sum sum.c
+
+sum.o : sum.c
+	mpicc -c -o sum.o sum.c
+#__________________________
 dummy_mpi: dummy_mpi.o
 	mpicc -o dummy_mpi dummy_mpi.c
 

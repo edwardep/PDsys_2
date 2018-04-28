@@ -1,10 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mpi.h"
-
+double gettime(void)
+{
+  struct timeval ttime;
+  gettimeofday(&ttime , NULL);
+  return ttime.tv_sec + ttime.tv_usec * 0.000001;
+}
 int main(int argc, char ** argv){
   int N = atoi(argv[1]);
   int id, nproc;
+  double time0,time1;
   int sum,startval,endval,accum;
   MPI_Status status;
   MPI_Init(&argc,&argv);
@@ -15,6 +21,8 @@ int main(int argc, char ** argv){
   sum = 0; // zero sum for accumulation
   startval = N*id/nproc+1;
   endval =   N*(id+1)/nproc;
+  if(id ==0 )
+    time0=gettime();
   for(int i=startval;i<=endval;++i)
     sum = sum + i;
 
@@ -26,6 +34,9 @@ int main(int argc, char ** argv){
       sum = sum + accum;
 
     }
-
+  if(id ==0){
+    time1=gettime();
+    fprintf(stdout, "time:%f\n\n",time1-time0);
+  }
   MPI_Finalize();
 }
