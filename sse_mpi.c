@@ -26,7 +26,7 @@ float randpval()
 int main(int argc, char ** argv)
 {
 	int N = atoi(argv[1]);
-	int iters = 1;
+	int iters = 100;
 
 	//<<____MPI
 	double time0,time1;
@@ -58,10 +58,10 @@ int main(int argc, char ** argv)
 	float * FVec = (float*)malloc(sizeof(float)*N);
 	assert(FVec!=NULL);
 
-	float * FVec_local = (float*)malloc(sizeof(float)*N/nproc);
+	float * FVec_local = (float*)malloc(sizeof(float)*N);
 	assert(FVec_local!=NULL);
 
-	float * FVec_local2 = (float*)malloc(sizeof(float)*N/nproc);
+	float * FVec_local2 = (float*)malloc(sizeof(float)*N);
 	assert(FVec_local2!=NULL);
 
 	for(int i=0;i<N;i++)
@@ -142,24 +142,23 @@ int main(int argc, char ** argv)
 			__m128 _FVec = _mm_div_ps(_num,_add_den);
 
 
-			_mm_store_ps(&FVec_local[k],_FVec);
-			k+=4;
+			_mm_store_ps(&FVec_local[i],_FVec);
 			
 		}
 
 		if(id != 0)
-			MPI_Send(FVec_local,N/nproc,MPI_FLOAT,0,0,MPI_COMM_WORLD);
+			MPI_Send(FVec_local,N,MPI_FLOAT,0,0,MPI_COMM_WORLD);
 		else
 		{
-			for(int m=0;m<N/nproc;m++)
+			for(int m=0;m<N;m++)
 					FVec[m] = FVec_local[m];
 			for(int j=1;j<nproc;j++){
-				MPI_Recv(FVec_local2,N/nproc,MPI_FLOAT,j,0,MPI_COMM_WORLD,&status);
+				MPI_Recv(FVec_local2,N,MPI_FLOAT,j,0,MPI_COMM_WORLD,&status);
 				// MPI_Get_count(&status, MPI_FLOAT, &count);
 				// printf("Task %d: Received %d floats from task %d \n",
     //    				id, count, status.MPI_SOURCE);
-				for(int m=0;m<N/nproc;m++)
-					FVec[m+j*N/nproc] = FVec_local2[m];
+				for(int m=0;m<N;m++)
+					FVec[m] = FVec_local2[m];
 			}
 		}
 		if(id == 0){

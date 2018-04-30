@@ -1,7 +1,7 @@
 all_sse:
-	$(MAKE) sse sse_s sse_mpi
+	$(MAKE) sse sse_mpi
 	@echo "\n\n"
-	@./sse_s $(N)
+	#@./sse_s $(N)
 	@./sse $(N)
 	@lamboot
 	@mpiexec -n $(P) ./sse_mpi $(N)
