@@ -78,8 +78,9 @@ int main(int argc, char ** argv)
 	for(int j=0;j<iters;j++)
 	{
 		double time0=gettime();
+		int i;
 		int unroll = (N/4)*4;
-		for(int i=0;i<unroll;i+=4)
+		for(i = 0 ; i < unroll ; i += 4 )
 		{
 			/* num_0 = LVec[i]+RVec[i]; */
 			__m128 _LVec = _mm_load_ps(&LVec[i]); 
@@ -121,32 +122,32 @@ int main(int argc, char ** argv)
 			__m128 _FVec = _mm_div_ps(_num,_add_den);
 			_mm_store_ps(&FVec[i],_FVec);
 
-			/* maxF = FVec[i]>maxF?FVec[i]:maxF; 
-			 * if statement with bitwise operation intrinsics
-			 */
-
-			// __m128 cmpv = _mm_cmpgt_ps(_FVec,_maxF);
-			// __m128 not_cmpv = _mm_cmple_ps(_FVec,_maxF);
-			// __m128 and1 = _mm_and_ps(_FVec,cmpv);
-			// __m128 and2 = _mm_and_ps(_maxF,not_cmpv);
-			// _maxF = _mm_or_ps(and1,and2);
-			// print128_num(_maxF);
-			// _mm_store_ps(&maxFVec[0],_maxF);
-			
-			/*
-			 * if statement with simple loop check
-			 */
+			/* maxF = FVec[i]>maxF?FVec[i]:maxF; */
 			for(int k = 0; k<4;k++)
 				if(FVec[i+k]>maxF)
 					maxF = FVec[i+k];
 		}
+
+		/* HANDLE REMAINDER */
+		for(/*i*/;i<N;i++)
+		{
+			float num_0 = LVec[i]+RVec[i];
+			float num_1 = mVec[i]*(mVec[i]-1.0)/2.0;
+			float num_2 = nVec[i]*(nVec[i]-1.0)/2.0;
+			float num = num_0/(num_1+num_2);
+
+			float den_0 = CVec[i]-LVec[i]-RVec[i];
+			float den_1 = mVec[i]*nVec[i];
+			float den = den_0/den_1;
+
+			FVec[i] = num/(den+0.01);
+
+			maxF = FVec[i]>maxF?FVec[i]:maxF;
+
+		}
 		double time1=gettime();
 		timeTotal += time1-time0;
 	}
-	/*
-	 * IF (N % 4 != 0) remainder is NOT handled!!
-	 * extra code needed(for loop)
-	 */
 	printf("Time %f Max %f\n", timeTotal/iters, maxF);
 
 	free(mVec);
@@ -155,4 +156,6 @@ int main(int argc, char ** argv)
 	free(RVec);
 	free(CVec);
 	free(FVec);
+
+	return 0;
 }

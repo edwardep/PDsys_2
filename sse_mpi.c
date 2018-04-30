@@ -26,11 +26,11 @@ float randpval()
 int main(int argc, char ** argv)
 {
 	int N = atoi(argv[1]);
-	int iters = 1000;
+	int iters = 1;
 
 	//<<____MPI
 	double time0,time1;
-	int nproc,id;
+	int nproc,id,count;
 	MPI_Status status;
 
 	MPI_Init(&argc,&argv);
@@ -57,6 +57,12 @@ int main(int argc, char ** argv)
 
 	float * FVec = (float*)malloc(sizeof(float)*N);
 	assert(FVec!=NULL);
+
+	float * FVec_local = (float*)malloc(sizeof(float)*N/nproc);
+	assert(FVec_local!=NULL);
+
+	float * FVec_local2 = (float*)malloc(sizeof(float)*N/nproc);
+	assert(FVec_local2!=NULL);
 
 	for(int i=0;i<N;i++)
 	{
@@ -91,12 +97,11 @@ int main(int argc, char ** argv)
 	{
 		double time0=gettime();
 		int unroll = (N/4)*4;
-
-		float * FVec_local = (float*)malloc(sizeof(float)*N/nproc);
-		float * FVec_local2 = (float*)malloc(sizeof(float)*N/nproc);
-		int k = 0;
-		for(int i=id*4;i<unroll;i+=4*nproc)
+		int i,k = 0;
+		for( i=id*4;i<unroll;i+=4*nproc)
 		{
+			//printf("this is id: %d, iters: [%d...%d] \n",id,i,i+3);
+
 			/* num_0 = LVec[i]+RVec[i]; */
 			__m128 _LVec = _mm_load_ps(&LVec[i]); 
 			__m128 _RVec = _mm_load_ps(&RVec[i]);
@@ -139,24 +144,7 @@ int main(int argc, char ** argv)
 
 			_mm_store_ps(&FVec_local[k],_FVec);
 			k+=4;
-			/* maxF = FVec[i]>maxF?FVec[i]:maxF; 
-			 * if statement with bitwise operation intrinsics
-			 */
-
-			// __m128 cmpv = _mm_cmpgt_ps(_FVec,_maxF);
-			// __m128 not_cmpv = _mm_cmple_ps(_FVec,_maxF);
-			// __m128 and1 = _mm_and_ps(_FVec,cmpv);
-			// __m128 and2 = _mm_and_ps(_maxF,not_cmpv);
-			// _maxF = _mm_or_ps(and1,and2);
-			// print128_num(_maxF);
-			// _mm_store_ps(&maxFVec[0],_maxF);
 			
-			/*
-			 * if statement with simple loop check
-			 */
-			// for(int k = 0; k<4;k++)
-			// 	if(FVec[i+k]>maxF)
-			// 		maxF = FVec[i+k];
 		}
 
 		if(id != 0)
@@ -167,12 +155,32 @@ int main(int argc, char ** argv)
 					FVec[m] = FVec_local[m];
 			for(int j=1;j<nproc;j++){
 				MPI_Recv(FVec_local2,N/nproc,MPI_FLOAT,j,0,MPI_COMM_WORLD,&status);
-				//memcpy(FVec+(j*chunk*sizeof(float)),FVec_local,chunk*sizeof(float));
+				// MPI_Get_count(&status, MPI_FLOAT, &count);
+				// printf("Task %d: Received %d floats from task %d \n",
+    //    				id, count, status.MPI_SOURCE);
 				for(int m=0;m<N/nproc;m++)
 					FVec[m+j*N/nproc] = FVec_local2[m];
 			}
 		}
+		if(id == 0){
+			/* HANDLE REMAINDER */
+			for(i = unroll; i<N ;i++)
+			{
+				float num_0 = LVec[i]+RVec[i];
+				float num_1 = mVec[i]*(mVec[i]-1.0)/2.0;
+				float num_2 = nVec[i]*(nVec[i]-1.0)/2.0;
+				float num = num_0/(num_1+num_2);
 
+				float den_0 = CVec[i]-LVec[i]-RVec[i];
+				float den_1 = mVec[i]*nVec[i];
+				float den = den_0/den_1;
+
+				FVec[i] = num/(den+0.01);
+			}
+			for(int k = 0; k < N; k++)
+				if(FVec[k] > maxF)
+					maxF = FVec[k];
+		}
 		double time1=gettime();
 		timeTotal += time1-time0;
 	}
@@ -180,12 +188,24 @@ int main(int argc, char ** argv)
 	 * IF (N % 4 != 0) remainder is NOT handled!!
 	 * extra code needed(for loop)
 	 */
-	printf("Time %f\n", timeTotal/iters);//, maxF);
+	if(id ==0){
 
+    // for(int j=0;j<N;j++)
+    //   fprintf(stdout, "c[%d]:%f\n",j,c[j]);
+	    //time1=gettime();
+	    printf("Time %f Max %f\n", timeTotal/iters, maxF);
+  	}
+	
+  	free(FVec_local);
+  	free(FVec_local2);
 	free(mVec);
 	free(nVec);
 	free(LVec);
 	free(RVec);
 	free(CVec);
 	free(FVec);
+
+
+	MPI_Finalize();
+	exit(0);
 }

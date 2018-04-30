@@ -104,6 +104,6 @@ int main(int argc, char ** argv)
 	free(RVec);
 	free(CVec);
 	free(FVec);
-}
 
-//~~~~~~ || original for loop ||~~~~~~
+	return 0;
+}

@@ -44,6 +44,9 @@ int main(int argc, char **argv)
 	{
 		c[i] = a[i] + b[i];
 	}
+
+	// for(int j=0;j<N;j++)
+ //      fprintf(stdout, "c[%d]:%f\n",j,c[j]);
 	double time1=gettime();
 	fprintf(stdout, "time:%f\n\n",time1-time0);
 

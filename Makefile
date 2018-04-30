@@ -75,3 +75,4 @@ clean:
 	rm -f dummy_s dummy_s.o
 	rm -f sse sse.o
 	rm -f sse_s sse_s.o
+	rm -f sse_mpi sse_mpi.o
