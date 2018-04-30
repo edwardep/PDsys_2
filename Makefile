@@ -1,8 +1,10 @@
 all_sse:
-	$(MAKE) sse sse_s
+	$(MAKE) sse sse_s sse_mpi
 	@echo "\n\n"
 	@./sse_s $(N)
 	@./sse $(N)
+	@lamboot
+	@mpiexec -n $(P) ./sse_mpi $(N)
 
 all_dumm:
 	$(MAKE) dummy dummy_s dummy_mpi
@@ -47,6 +49,13 @@ dummy: dummy.o
 
 dummy.o : dummy.c
 	gcc -c -o dummy.o dummy.c -msse4.2
+
+
+sse_mpi: sse_mpi.o
+	mpicc -o sse_mpi sse_mpi.c
+
+sse_mpi.o : sse_mpi.c
+	mpicc -c -o sse_mpi.o sse_mpi.c
 
 sse_s: sse_s.o
 	gcc -o sse_s sse_s.c

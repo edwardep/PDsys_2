@@ -19,11 +19,11 @@ int main(int argc, char ** argv){
   // get id of mynode:
   MPI_Comm_rank(MPI_COMM_WORLD, &id);     
   sum = 0; // zero sum for accumulation
-  startval = N*id/nproc+1;
-  endval =   N*(id+1)/nproc;
+  // startval = N*id/nproc+1;
+  // endval =   N*(id+1)/nproc;
   if(id ==0 )
     time0=gettime();
-  for(int i=startval;i<=endval;++i)
+  for(int i=1+id;i<=N;i+=nproc)
     sum = sum + i;
 
   if(id!=0) //the slaves sending back the partial sums

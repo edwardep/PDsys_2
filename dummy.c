@@ -32,9 +32,6 @@ int main(int argc, char **argv)
 	//loop to be vectorized
 	double time0=gettime();
 	int unroll = (N/4)*4;
-	// __m128 xVec = _mm_set1_ps(-1);
-	// __m128 c9 = _mm_set1_ps(9);
-	// __m128 c1 = _mm_set1_ps(2);
 	for(i=0;i<unroll;i+=4)
 	{
 		__m128 av = _mm_load_ps(&a[i]);
@@ -42,25 +39,6 @@ int main(int argc, char **argv)
 		__m128 cv = _mm_add_ps(av,bv);
 
 		_mm_store_ps(&c[i],cv);
-
-
-		//x = if(i<3)?0:1;
-		//===============
-		//if( a[i] < 3 )
-		//	x = 1;
-		//else
-		//	x = 0;
-		
-
-		// __m128 cmpv = _mm_cmplt_ps(av,c1);
-		// __m128 not_cmpv = _mm_cmpge_ps(av,c1);
-		// __m128 and1 = _mm_and_ps(c9,cmpv);
-		// __m128 and2 = _mm_and_ps(c1,not_cmpv);
-		// xVec = _mm_or_ps(and1,and2);
-
-		// _mm_store_ps(&c[i],xVec);
-
-		//c[i] = a[i] * b[i];
 	}
 	for(;i<N;i++)
 	{

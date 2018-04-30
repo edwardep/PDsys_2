@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
-#include <assert.h>
 
 double gettime(void)
 {
@@ -27,7 +26,7 @@ int main(int argc, char **argv)
 		b[i] = i;
 		c[i] = 0;
 	}
-	int x = -1;
+
 	//loop to be vectorized
 	double time0=gettime();
 	for(i=0;i<N;i++)
@@ -37,7 +36,5 @@ int main(int argc, char **argv)
 	}
 	double time1=gettime();
 	fprintf(stdout, "time:%f\n\n",time1-time0);
-	// for(i = 0;i<N;i++)
-	// 	printf("c[%d]:%d\n",i,c[i]);
 	return 0;
 }
