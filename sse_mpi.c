@@ -188,11 +188,9 @@ int main(int argc, char ** argv)
 		timeTotal += time1-time0;
 	} // END of "iters" loop
 
-	if(id == MASTER){
-    // for(int j=0;j<N;j++)
-    //   fprintf(stdout, "c[%d]:%f\n",j,c[j]);
+	if(id == MASTER)
 	    printf("Time %f Max %f\n", timeTotal/iters, maxF);
-  	}
+
 	
   	free(FVec_send);
   	free(FVec_recv);
