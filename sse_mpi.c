@@ -7,6 +7,8 @@
 #include "immintrin.h"
 #include "mpi.h"
 
+#define MASTER 0
+
 double gettime(void)
 {
 	struct timeval ttime;
@@ -28,15 +30,14 @@ int main(int argc, char ** argv)
 	int N = atoi(argv[1]);
 	int iters = 100;
 
-	//<<____MPI
-	double time0,time1;
+/*_<<MPI_*/
 	int nproc,id,count;
 	MPI_Status status;
 
 	MPI_Init(&argc,&argv);
 	MPI_Comm_size(MPI_COMM_WORLD,&nproc);
 	MPI_Comm_rank(MPI_COMM_WORLD,&id);
-	//MPI____>>
+/*_MPI>>_*/
 
 	srand(1);
 
@@ -58,11 +59,13 @@ int main(int argc, char ** argv)
 	float * FVec = (float*)malloc(sizeof(float)*N);
 	assert(FVec!=NULL);
 
-	float * FVec_local = (float*)malloc(sizeof(float)*N);
-	assert(FVec_local!=NULL);
+/*_<<MPI_*/
+	float * FVec_send = (float*)malloc(sizeof(float)*N);
+	assert(FVec_send!=NULL);
 
-	float * FVec_local2 = (float*)malloc(sizeof(float)*N);
-	assert(FVec_local2!=NULL);
+	float * FVec_recv = (float*)malloc(sizeof(float)*N);
+	assert(FVec_recv!=NULL);
+/*_MPI>>_*/
 
 	for(int i=0;i<N;i++)
 	{
@@ -97,11 +100,9 @@ int main(int argc, char ** argv)
 	{
 		double time0=gettime();
 		int unroll = (N/4)*4;
-		int i,k = 0;
-		for( i=id*4;i<unroll;i+=4*nproc)
+		int i;
+		for(i=id*4; i<unroll; i+=4*nproc)
 		{
-			//printf("this is id: %d, iters: [%d...%d] \n",id,i,i+3);
-
 			/* num_0 = LVec[i]+RVec[i]; */
 			__m128 _LVec = _mm_load_ps(&LVec[i]); 
 			__m128 _RVec = _mm_load_ps(&RVec[i]);
@@ -142,26 +143,27 @@ int main(int argc, char ** argv)
 			__m128 _FVec = _mm_div_ps(_num,_add_den);
 
 
-			_mm_store_ps(&FVec_local[i],_FVec);
+			_mm_store_ps(&FVec_send[i],_FVec);
 			
 		}
 
-		if(id != 0)
-			MPI_Send(FVec_local,N,MPI_FLOAT,0,0,MPI_COMM_WORLD);
+		if(id != MASTER)
+			MPI_Send(FVec_send,N,MPI_FLOAT,0,0,MPI_COMM_WORLD);
 		else
 		{
+			/* Copy MASTER process's local data to MAIN Array */
 			for(int m=0;m<N;m++)
-					FVec[m] = FVec_local[m];
-			for(int j=1;j<nproc;j++){
-				MPI_Recv(FVec_local2,N,MPI_FLOAT,j,0,MPI_COMM_WORLD,&status);
-				// MPI_Get_count(&status, MPI_FLOAT, &count);
-				// printf("Task %d: Received %d floats from task %d \n",
-    //    				id, count, status.MPI_SOURCE);
+					FVec[m] = FVec_send[m];
+
+			/* Iterate through SLAVE processes and copy their local data to MAIN Array */
+			for(int j=1; j<nproc; j++){
+				MPI_Recv(FVec_recv,N,MPI_FLOAT,j,0,MPI_COMM_WORLD,&status);
 				for(int m=0;m<N;m++)
-					FVec[m] = FVec_local2[m];
+					FVec[m] += FVec_recv[m];
 			}
 		}
-		if(id == 0){
+
+		if(id == MASTER){
 			/* HANDLE REMAINDER */
 			for(i = unroll; i<N ;i++)
 			{
@@ -176,27 +178,24 @@ int main(int argc, char ** argv)
 
 				FVec[i] = num/(den+0.01);
 			}
+
+			/* Find maxF in whole Array FVec */
 			for(int k = 0; k < N; k++)
 				if(FVec[k] > maxF)
 					maxF = FVec[k];
 		}
 		double time1=gettime();
 		timeTotal += time1-time0;
-	}
-	/*
-	 * IF (N % 4 != 0) remainder is NOT handled!!
-	 * extra code needed(for loop)
-	 */
-	if(id ==0){
+	} // END of "iters" loop
 
+	if(id == MASTER){
     // for(int j=0;j<N;j++)
     //   fprintf(stdout, "c[%d]:%f\n",j,c[j]);
-	    //time1=gettime();
 	    printf("Time %f Max %f\n", timeTotal/iters, maxF);
   	}
 	
-  	free(FVec_local);
-  	free(FVec_local2);
+  	free(FVec_send);
+  	free(FVec_recv);
 	free(mVec);
 	free(nVec);
 	free(LVec);
@@ -206,5 +205,5 @@ int main(int argc, char ** argv)
 
 
 	MPI_Finalize();
-	exit(0);
+	return 0;
 }

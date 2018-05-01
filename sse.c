@@ -79,8 +79,8 @@ int main(int argc, char ** argv)
 	{
 		double time0=gettime();
 		int i;
-		int unroll = (N/4)*4;
-		for(i = 0 ; i < unroll ; i += 4 )
+		int unroll = (N/4)*4;		//calculate the upper limit of the loop that is dividable by 4
+		for(i=0; i<unroll; i+=4)	
 		{
 			/* num_0 = LVec[i]+RVec[i]; */
 			__m128 _LVec = _mm_load_ps(&LVec[i]); 
@@ -123,13 +123,17 @@ int main(int argc, char ** argv)
 			_mm_store_ps(&FVec[i],_FVec);
 
 			/* maxF = FVec[i]>maxF?FVec[i]:maxF; */
+			/* For each "k" in vector FVec[i] (= [k0|k1|k2|k3])
+			**     compare it to maxF
+			**			save value
+			*/			
 			for(int k = 0; k<4;k++)
 				if(FVec[i+k]>maxF)
 					maxF = FVec[i+k];
 		}
 
-		/* HANDLE REMAINDER */
-		for(/*i*/;i<N;i++)
+		/* HANDLE REMAINDER */ 
+		for(/*i = unroll*/;i<N;i++)
 		{
 			float num_0 = LVec[i]+RVec[i];
 			float num_1 = mVec[i]*(mVec[i]-1.0)/2.0;
